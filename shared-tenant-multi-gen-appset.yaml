@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: tenant-apps
+  namespace: argocd
+spec:
+  generators:
+    - matrix:
+        generators:
+          - clusters:
+              selector:
+                matchLabels:
+                  deploy-tenant-apps: 'true'
+                  repo: vcp-demo
+          - git:
+              directories:
+                - path: tenant-apps/*
+              repoURL: https://github.com/loft-demos/vcp-demo.git
+              revision: HEAD
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  template:
+    metadata:
+      name: '{{.name}}-{{.path.basename}}'
+    spec:
+      destination:
+        namespace: '{{.path.basename}}'
+        server: '{{.server}}'
+      project: default
+      source:
+        path: '{{.path.path}}'
+        repoURL: https://github.com/loft-demos/vcp-demo.git
+        targetRevision: HEAD
+      syncPolicy:
+        automated:
+          prune: true    
+        syncOptions:
+        - CreateNamespace=true
+        retry:
+          limit: 3
+          backoff:
+            duration: 5s 
+            factor: 2 
+            maxDuration: 1m
